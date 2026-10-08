@@ -24,7 +24,7 @@ st.title("Explorador de operación")
 st.caption("Aplicación inicial para explorar resultados por área y región.")
 
 # TODO OBLIGATORIO: escribe tu nombre completo.
-st.write("**Desarrollado por:** Escribe aquí tu nombre")
+st.write("**Desarrollado por:** Marcos Alejandro Gutierrez Reyes")
 
 st.sidebar.header("Filtros")
 
@@ -35,30 +35,70 @@ areas_seleccionadas = st.sidebar.multiselect(
     default=areas_disponibles,
 )
 
-df_filtrado = df[df["Área"].isin(areas_seleccionadas)].copy()
+# Filtro adicional por región
+regiones_disponibles = sorted(df["Región"].dropna().unique())
 
-st.subheader("Datos disponibles")
-st.dataframe(df_filtrado, width="stretch", hide_index=True)
-
-casos_por_fecha = (
-    df_filtrado.groupby("Fecha", as_index=False)["Casos"]
-    .sum()
-    .sort_values("Fecha")
+regiones_seleccionadas = st.sidebar.multiselect(
+    "Región",
+    options=regiones_disponibles,
+    default=regiones_disponibles,
 )
 
-fig = px.line(
-    casos_por_fecha,
-    x="Fecha",
-    y="Casos",
-    markers=True,
-    title="Casos por fecha",
-)
-st.plotly_chart(fig, width="stretch")
+# Aplicar ambos filtros
+df_filtrado = df[
+    df["Área"].isin(areas_seleccionadas)
+    & df["Región"].isin(regiones_seleccionadas)
+].copy()
 
-st.info(
-    "Esta es la versión inicial. Selecciona una opción de la actividad y agrega "
-    "una mejora funcional para el usuario."
-)
+# Indicadores del tablero ejecutivo
+total_casos = df_filtrado["Casos"].sum()
+promedio_casos = df_filtrado["Casos"].mean()
+
+col1, col2 = st.columns(2)
+
+with col1:
+    st.metric(
+        label="Total de casos",
+        value=f"{total_casos:,.0f}"
+    )
+
+with col2:
+    st.metric(
+        label="Promedio de casos por registro",
+        value=f"{promedio_casos:,.2f}" if not df_filtrado.empty else "0"
+    )
+# Crear dos pestañas para organizar la información
+tab1, tab2 = st.tabs(["📊 Resumen ejecutivo", "📋 Detalle de datos"])
+
+# Primera pestaña: gráfica de casos
+with tab1:
+    st.subheader("Evolución de casos por fecha")
+
+    casos_por_fecha = (
+        df_filtrado.groupby("Fecha", as_index=False)["Casos"]
+        .sum()
+        .sort_values("Fecha")
+    )
+
+    fig = px.line(
+        casos_por_fecha,
+        x="Fecha",
+        y="Casos",
+        markers=True,
+        title="Casos por fecha",
+    )
+
+    st.plotly_chart(fig, width="stretch")
+
+# Segunda pestaña: tabla de datos
+with tab2:
+    st.subheader("Datos disponibles")
+
+    st.dataframe(
+        df_filtrado,
+        width="stretch",
+        hide_index=True
+    )
 
 
 # ================================================================
